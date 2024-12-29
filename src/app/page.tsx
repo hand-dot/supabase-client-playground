@@ -1,101 +1,192 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { FormEvent, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import "tailwindcss/tailwind.css";
+
+function SupabasePlayground() {
+  const [apiKey, setApiKey] = useState("");
+  const [apiUrl, setApiUrl] = useState("");
+  const [query, setQuery] = useState("");
+  const [response, setResponse] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const handleRunQuery = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!apiKey || !apiUrl) {
+      setError("Please provide both the API Key and URL.");
+      return;
+    }
+
+    const supabase = createClient(apiUrl, apiKey);
+
+    try {
+      setError(null);
+      setResponse(null);
+
+      // Evaluate the query dynamically
+      const func = new Function("supabase", `return ${query}`);
+      const result = await func(supabase);
+
+      const { data, error } = result;
+      if (error) {
+        setError(error.message);
+      } else {
+        setResponse(data);
+        setHistory((prev) => [...prev, query]);
+      }
+    } catch (err) {
+      setError(`Unexpected error: ${err}`);
+    }
+  };
+
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+    }, 1000);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="bg-neutral-900 h-screen grid grid-cols-3 gap-4 font-sans min-h-screen">
+      <main className="col-span-2 p-4">
+        <h1 className="text-2xl font-bold mb-8">Supabase Client Playground</h1>
+        <form className="space-y-4">
+          <div className="flex gap-4">
+            <div className="w-full">
+              <label className="block font-medium mb-2">API URL:</label>
+              <input
+                type="text"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://xyzcompany.supabase.co"
+                className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
+              />
+            </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+            <div className="w-full">
+              <label className="block font-medium mb-2">API Key:</label>
+              <input
+                type="text"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Your Supabase API Key"
+                className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-medium mb-2">Query:</label>
+            <div className="flex gap-4 mb-4">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="e.g., supabase.from('table').select()"
+                className="mb-6 text-neutral-900 w-full p-2 border border-gray-300 rounded-lg h-14"
+              />
+              <button
+                type="submit"
+                onClick={handleRunQuery}
+                className="mb-6 flex justify-center items-center gap-2 w-48 rounded-lg bg-green-600 border-green-500 border-2 py-3 px-6 font-sans text-xs font-bold text-white"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                  />
+                </svg>
+                Run query
+              </button>
+            </div>
+
+            {error && (
+              <div className="text-red-600 font-medium">
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+
+            {response && (
+              <div className="text-green-900 font-medium">
+                <strong className="text-white font-medium mb-2">
+                  Response:
+                </strong>
+                <pre className="h-[calc(100vh-350px)] px-4 py-2 bg-green-100 rounded-lg mt-2 overflow-x-auto">
+                  {JSON.stringify(response, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </form>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <aside className="bg-neutral-800 p-4 h-screen overflow-y-auto">
+        <h2 className="text-xl mb-8">Query history</h2>
+        {history.length === 0 ? (
+          <p className="text-gray-600">No queries executed yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {history.map((q, index) => (
+              <li
+                key={index}
+                className="bg-white px-2 py-4 rounded-lg shadow-sm border border-gray-300"
+              >
+                <pre className="text-sm text-gray-800 overflow-x-auto flex justify-between items-center">
+                  {q}
+                  <button
+                    onClick={() => handleCopyToClipboard(q)}
+                    className="ml-2 text-xs text-gray-800 bg-gray-200 p-2 rounded-md"
+                  >
+                    {!copied ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="size-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="size-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="m4.5 12.75 6 6 9-13.5"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                </pre>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
     </div>
   );
 }
+
+export default SupabasePlayground;
