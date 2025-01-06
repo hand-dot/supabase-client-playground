@@ -3,6 +3,7 @@
 import React, { FormEvent, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "tailwindcss/tailwind.css";
+import Image from "next/image";
 
 function SupabasePlayground() {
   const [apiKey, setApiKey] = useState("");
@@ -58,7 +59,15 @@ function SupabasePlayground() {
   return (
     <div className="bg-neutral-900 h-screen grid grid-cols-3 gap-4 font-sans min-h-screen">
       <main className="col-span-2 p-4">
-        <h1 className="text-2xl font-bold mb-8">Supabase Client Playground</h1>
+        <h1 className="text-2xl font-bold mb-8 flex gap-4">
+          <Image
+            src="https://supabase.com/dashboard/img/supabase-logo.svg"
+            width={24}
+            height={24}
+            alt="Supabase Logo"
+          />
+          Supabase Client Playground
+        </h1>
 
         <form className="space-y-4">
           <div className="bg-neutral-800 py-6 px-4 rounded-md">
