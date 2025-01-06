@@ -10,6 +10,7 @@ function SupabasePlayground() {
   const [query, setQuery] = useState("");
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [history, setHistory] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
 
@@ -25,17 +26,21 @@ function SupabasePlayground() {
     try {
       setError(null);
       setResponse(null);
+      setLoading(true);
 
       // Evaluate the query dynamically
       const func = new Function("supabase", `return ${query}`);
       const result = await func(supabase);
 
       const { data, error } = result;
+
       if (error) {
-        setError(error.message);
+        setError(error);
+        setLoading(false);
       } else {
         setResponse(data);
         setHistory((prev) => [...prev, query]);
+        setLoading(false);
       }
     } catch (err) {
       setError(`Unexpected error: ${err}`);
@@ -54,66 +59,74 @@ function SupabasePlayground() {
     <div className="bg-neutral-900 h-screen grid grid-cols-3 gap-4 font-sans min-h-screen">
       <main className="col-span-2 p-4">
         <h1 className="text-2xl font-bold mb-8">Supabase Client Playground</h1>
+
         <form className="space-y-4">
-          <div className="flex gap-4">
-            <div className="w-full">
-              <label className="block font-medium mb-2">API URL:</label>
-              <input
-                type="text"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="https://xyzcompany.supabase.co"
-                className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
-              />
+          <div className="bg-neutral-800 py-6 px-4 rounded-md">
+            <div className="flex gap-4">
+              <div className="w-full">
+                <label className="block font-medium mb-2">API URL:</label>
+                <input
+                  type="text"
+                  value={apiUrl}
+                  onChange={(e) => setApiUrl(e.target.value)}
+                  placeholder="https://xyzcompany.supabase.co"
+                  className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div className="w-full">
+                <label className="block font-medium mb-2">API Key:</label>
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Your Supabase API Key"
+                  className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
+                />
+              </div>
             </div>
 
-            <div className="w-full">
-              <label className="block font-medium mb-2">API Key:</label>
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Your Supabase API Key"
-                className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg"
-              />
+            <div>
+              <label className="block font-medium mt-2 mb-2">Query:</label>
+              <div className="flex gap-4">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="supabase.from('table').select()"
+                  className="text-neutral-900 w-full p-2 border border-gray-300 rounded-lg h-14"
+                />
+                <button
+                  type="submit"
+                  onClick={handleRunQuery}
+                  className="flex justify-center items-center gap-2 w-48 rounded-lg bg-green-600 border-green-500 border-2 py-3 px-6 font-sans text-xs font-bold text-white"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="size-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                    />
+                  </svg>
+                  Run query
+                </button>
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block font-medium mb-2">Query:</label>
-            <div className="flex gap-4 mb-4">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="e.g., supabase.from('table').select()"
-                className="mb-6 text-neutral-900 w-full p-2 border border-gray-300 rounded-lg h-14"
-              />
-              <button
-                type="submit"
-                onClick={handleRunQuery}
-                className="mb-6 flex justify-center items-center gap-2 w-48 rounded-lg bg-green-600 border-green-500 border-2 py-3 px-6 font-sans text-xs font-bold text-white"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="size-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                  />
-                </svg>
-                Run query
-              </button>
-            </div>
-
             {error && (
-              <div className="text-red-600 font-medium">
-                <strong>Error:</strong> {error}
+              <div className="text-red-900 font-medium">
+                <strong className="text-white font-medium mb-2">Error:</strong>
+                <p className="bg-red-200 h-[calc(100vh-364px)] px-4 py-2 text-red-900 rounded-lg mt-2 overflow-x-auto text-center my-auto">
+                  {JSON.stringify(error, null, 2)}
+                </p>
               </div>
             )}
 
@@ -122,18 +135,37 @@ function SupabasePlayground() {
                 <strong className="text-white font-medium mb-2">
                   Response:
                 </strong>
-                <pre className="h-[calc(100vh-350px)] px-4 py-2 bg-green-100 rounded-lg mt-2 overflow-x-auto">
+                <pre className="h-[calc(100vh-364px)] px-4 py-2 bg-green-100 rounded-lg mt-2 overflow-x-auto">
                   {JSON.stringify(response, null, 2)}
                 </pre>
+              </div>
+            )}
+
+            {!response && !error && (
+              <div className="text-green-900 font-medium">
+                <strong className="text-white font-medium mb-2">
+                  Response:
+                </strong>
+                {loading && (
+                  <pre className="bg-neutral-800 h-[calc(100vh-364px)] px-4 py-2 text-neutral-400 rounded-lg mt-2 overflow-x-auto text-center my-auto">
+                    Executing query...
+                  </pre>
+                )}
+                {!loading && (
+                  <pre className="bg-neutral-800 h-[calc(100vh-364px)] px-4 py-2 text-neutral-400 rounded-lg mt-2 overflow-x-auto text-center my-auto">
+                    Run a query to see the response here.
+                  </pre>
+                )}
               </div>
             )}
           </div>
         </form>
       </main>
+
       <aside className="bg-neutral-800 p-4 h-screen overflow-y-auto">
         <h2 className="text-xl mb-8">Query history</h2>
         {history.length === 0 ? (
-          <p className="text-gray-600">No queries executed yet.</p>
+          <p className="text-neutral-400">No queries executed yet.</p>
         ) : (
           <ul className="space-y-2">
             {history.map((q, index) => (
