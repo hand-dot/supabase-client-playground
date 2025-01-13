@@ -236,7 +236,7 @@ function SupabasePlayground() {
             {error && (
               <div className="text-red-900 font-medium">
                 <strong className="text-white font-medium mb-2">Error:</strong>
-                <p className="bg-red-200 h-[calc(100vh-364px)] px-4 py-2 text-red-900 rounded-lg mt-2 overflow-x-auto text-center my-auto">
+                <p className="bg-red-200 h-[calc(100vh-372px)] px-4 py-2 text-red-900 rounded-lg mt-2 overflow-x-auto text-center my-auto">
                   {JSON.stringify(error, null, 2)}
                 </p>
               </div>
@@ -247,7 +247,7 @@ function SupabasePlayground() {
                 <strong className="text-white font-medium mb-2">
                   Response:
                 </strong>
-                <pre className="h-[calc(100vh-364px)] px-4 py-2 bg-green-100 rounded-lg mt-2 overflow-x-auto">
+                <pre className="h-[calc(100vh-372px)] px-4 py-2 bg-green-100 rounded-lg mt-2 overflow-x-auto">
                   {JSON.stringify(response, null, 2)}
                 </pre>
               </div>
