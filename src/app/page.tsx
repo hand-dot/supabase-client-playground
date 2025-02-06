@@ -18,6 +18,7 @@ function SupabasePlayground() {
   const [loading, setLoading] = useState<boolean>(false);
   const [history, setHistory] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState<boolean>(false);
 
   const handleRunQuery = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,6 +87,7 @@ function SupabasePlayground() {
 
   const onFeedbackSubmit = async (e: React.FormEvent) => {
     try {
+      setFeedbackLoading(true);
       e.preventDefault();
 
       const form = e.target as HTMLFormElement;
@@ -95,6 +97,7 @@ function SupabasePlayground() {
 
       await supabase.from("feedback").insert({ description: value });
       alert("Feedback submitted successfully!");
+      setFeedbackLoading(false);
 
       const modal = document.getElementById(
         "feedback-modal"
@@ -126,7 +129,8 @@ function SupabasePlayground() {
           />
           <div className="flex justify-end">
             <button
-              className="mt-4 py-1 px-4 w-24 bg-green-600 border-2 border-green-500 rounded-lg"
+              disabled={feedbackLoading}
+              className="mt-4 py-1 px-4 w-24 bg-green-600 border-2 border-green-500 rounded-lg disabled:opacity-50"
               type="submit"
             >
               Submit
