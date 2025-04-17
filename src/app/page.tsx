@@ -1,16 +1,13 @@
 "use client";
 
-import React, { FormEvent, useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import React, { FormEvent, useState, useEffect, Suspense } from "react";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import "tailwindcss/tailwind.css";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
-function SupabasePlayground() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  );
+function SupabasePlaygroundContent() {
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [query, setQuery] = useState("");
@@ -30,6 +27,26 @@ function SupabasePlayground() {
     if (urlSupabaseUrl) setApiUrl(urlSupabaseUrl);
     if (urlSupabaseKey) setApiKey(urlSupabaseKey);
     if (urlQuery) setQuery(urlQuery);
+
+    // クライアントサイドでのみSupabaseクライアントを初期化
+    if (typeof window !== 'undefined') {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+      
+      // URLが有効かチェック
+      if (supabaseUrl && supabaseKey) {
+        try {
+          // URLが有効かテスト
+          new URL(supabaseUrl);
+          
+          const supabaseClient = createClient(supabaseUrl, supabaseKey);
+          setSupabase(supabaseClient);
+        } catch (error) {
+          console.warn("Invalid Supabase URL:", error);
+          // 無効なURLの場合は何もしない
+        }
+      }
+    }
   }, [searchParams]);
 
   const handleRunQuery = async (e: FormEvent) => {
@@ -107,6 +124,10 @@ function SupabasePlayground() {
         feedback: { value },
       } = form;
 
+      if (!supabase) {
+        throw new Error("Supabase client not initialized");
+      }
+
       await supabase.from("feedback").insert({ description: value });
       alert("Feedback submitted successfully!");
       setFeedbackLoading(false);
@@ -116,8 +137,10 @@ function SupabasePlayground() {
       ) as HTMLDialogElement | null;
       if (!modal) return;
       modal.close();
-    } catch {
+    } catch (error) {
+      console.error("Feedback submission error:", error);
       alert("There has been an error, please, try again later.");
+      setFeedbackLoading(false);
     }
   };
 
@@ -346,6 +369,14 @@ function SupabasePlayground() {
         )}
       </aside>
     </div>
+  );
+}
+
+function SupabasePlayground() {
+  return (
+    <Suspense fallback={<div className="bg-neutral-900 h-screen flex items-center justify-center text-white">読み込み中...</div>}>
+      <SupabasePlaygroundContent />
+    </Suspense>
   );
 }
 
