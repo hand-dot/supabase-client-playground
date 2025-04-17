@@ -8,8 +8,8 @@ import { useSearchParams } from "next/navigation";
 
 function SupabasePlayground() {
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    "https://placeholder-url.supabase.co",
+    "placeholder-key"
   );
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
