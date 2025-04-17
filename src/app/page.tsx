@@ -188,7 +188,7 @@ function SupabasePlaygroundContent() {
           <div className="flex gap-4 items-center">
             <a
               target="_blank"
-              href="https://github.com/ismaeljtl/supabase-client-playground"
+              href="https://github.com/hand-dot/supabase-client-playground"
             >
               <svg
                 fill="white"
