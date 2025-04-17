@@ -1,9 +1,10 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "tailwindcss/tailwind.css";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
 function SupabasePlayground() {
   const supabase = createClient(
@@ -19,6 +20,17 @@ function SupabasePlayground() {
   const [history, setHistory] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [feedbackLoading, setFeedbackLoading] = useState<boolean>(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const urlSupabaseUrl = searchParams.get("supabaseUrl");
+    const urlSupabaseKey = searchParams.get("supabaseKey");
+    const urlQuery = searchParams.get("query");
+
+    if (urlSupabaseUrl) setApiUrl(urlSupabaseUrl);
+    if (urlSupabaseKey) setApiKey(urlSupabaseKey);
+    if (urlQuery) setQuery(urlQuery);
+  }, [searchParams]);
 
   const handleRunQuery = async (e: FormEvent) => {
     e.preventDefault();
