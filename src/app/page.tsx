@@ -1,13 +1,12 @@
 "use client";
 
-import React, { FormEvent, useState, useEffect, Suspense } from "react";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import React, { FormEvent, useState, useEffect, useCallback, Suspense } from "react";
+import { createClient } from "@supabase/supabase-js";
 import "tailwindcss/tailwind.css";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
 function SupabasePlaygroundContent() {
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [query, setQuery] = useState("");
@@ -16,47 +15,12 @@ function SupabasePlaygroundContent() {
   const [loading, setLoading] = useState<boolean>(false);
   const [history, setHistory] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [feedbackLoading, setFeedbackLoading] = useState<boolean>(false);
+  const [hasShownConfirmation, setHasShownConfirmation] = useState(false);
   const searchParams = useSearchParams();
 
-  useEffect(() => {
-    const urlSupabaseUrl = searchParams.get("supabaseUrl");
-    const urlSupabaseKey = searchParams.get("supabaseKey");
-    const urlQuery = searchParams.get("query");
-
-    if (urlSupabaseUrl) setApiUrl(urlSupabaseUrl);
-    if (urlSupabaseKey) setApiKey(urlSupabaseKey);
-    if (urlQuery) setQuery(urlQuery);
-
-    // クライアントサイドでのみSupabaseクライアントを初期化
-    if (typeof window !== 'undefined') {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-      
-      // URLが有効かチェック
-      if (supabaseUrl && supabaseKey) {
-        try {
-          // URLが有効かテスト
-          new URL(supabaseUrl);
-          
-          const supabaseClient = createClient(supabaseUrl, supabaseKey);
-          setSupabase(supabaseClient);
-        } catch (error) {
-          console.warn("Invalid Supabase URL:", error);
-          // 無効なURLの場合は何もしない
-        }
-      }
-    }
-  }, [searchParams]);
-
-  const handleRunQuery = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!apiKey || !apiUrl) {
-      setError("Please provide both the API Key and URL.");
-      return;
-    }
-
-    const supabase = createClient(apiUrl, apiKey);
+  const handleRunQuery = useCallback(async ({ key, url, query }: { key: string, url: string, query: string }) => {
+    console.log("Running:", key, url, query);
+    const supabase = createClient(url, key);
 
     try {
       setError(null);
@@ -80,7 +44,35 @@ function SupabasePlaygroundContent() {
     } catch (err) {
       setError(`Unexpected error: ${err}`);
     }
-  };
+  }, [setError, setResponse, setLoading, setHistory]);
+
+  useEffect(() => {
+    const urlSupabaseUrl = searchParams.get("supabaseUrl");
+    const urlSupabaseKey = searchParams.get("supabaseKey");
+    const urlQuery = searchParams.get("query");
+
+    if (urlSupabaseUrl) setApiUrl(urlSupabaseUrl);
+    if (urlSupabaseKey) setApiKey(urlSupabaseKey);
+    if (urlQuery) setQuery(urlQuery);
+
+    if (urlSupabaseUrl && urlSupabaseKey && urlQuery && !hasShownConfirmation) {
+      setHasShownConfirmation(true);
+      setTimeout(() => {
+        if (window.confirm(
+          "You have opened this page with query parameters. Do you want to run the query?"
+        )) {
+          handleRunQuery({
+            key: urlSupabaseKey,
+            url: urlSupabaseUrl,
+            query: urlQuery,
+          });
+        }
+      }, 500);
+    }
+
+  }, [searchParams, handleRunQuery, hasShownConfirmation]);
+
+
 
   const handleCopyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -90,90 +82,8 @@ function SupabasePlaygroundContent() {
     }, 1000);
   };
 
-  const openModal = () => {
-    const modal = document.getElementById(
-      "feedback-modal"
-    ) as HTMLDialogElement | null;
-    if (!modal) return;
-    modal.showModal();
-
-    addCloseFnListener(modal);
-  };
-
-  const addCloseFnListener = (modal: HTMLDialogElement) => {
-    modal.addEventListener("click", (click) => {
-      const backdrop = modal.getBoundingClientRect();
-      const isInsideModal =
-        backdrop.top <= click.clientY &&
-        click.clientY <= backdrop.top + backdrop.height &&
-        backdrop.left <= click.clientX &&
-        click.clientX <= backdrop.left + backdrop.width;
-      if (!isInsideModal) {
-        modal.close();
-      }
-    });
-  };
-
-  const onFeedbackSubmit = async (e: React.FormEvent) => {
-    try {
-      setFeedbackLoading(true);
-      e.preventDefault();
-
-      const form = e.target as HTMLFormElement;
-      const {
-        feedback: { value },
-      } = form;
-
-      if (!supabase) {
-        throw new Error("Supabase client not initialized");
-      }
-
-      await supabase.from("feedback").insert({ description: value });
-      alert("Feedback submitted successfully!");
-      setFeedbackLoading(false);
-
-      const modal = document.getElementById(
-        "feedback-modal"
-      ) as HTMLDialogElement | null;
-      if (!modal) return;
-      modal.close();
-    } catch (error) {
-      console.error("Feedback submission error:", error);
-      alert("There has been an error, please, try again later.");
-      setFeedbackLoading(false);
-    }
-  };
-
   return (
     <div className="bg-neutral-900 h-screen grid grid-cols-3 gap-4 font-sans min-h-screen">
-      <dialog
-        id="feedback-modal"
-        className="w-1/3 p-4 rounded-md bg-neutral-600 text-neutral-100"
-      >
-        <h2 className="font-sans text-md font-medium mb-6">
-          What do you think about the app?
-        </h2>
-
-        <form onSubmit={onFeedbackSubmit} className="flex flex-col">
-          <textarea
-            required
-            name="feedback"
-            placeholder="Your feedback here..."
-            className="text-neutral-900 p-2 rounded-md focus:outline-none focus:ring border-none focus:border-green-200"
-            rows={4}
-          />
-          <div className="flex justify-end">
-            <button
-              disabled={feedbackLoading}
-              className="mt-4 py-1 px-4 w-24 bg-green-600 border-2 border-green-500 rounded-lg disabled:opacity-50"
-              type="submit"
-            >
-              Submit
-            </button>
-          </div>
-        </form>
-      </dialog>
-
       <main className="col-span-2 p-4">
         <div className="mb-8 flex justify-between items-center">
           <h1 className="text-2xl font-bold flex gap-4">
@@ -202,12 +112,13 @@ function SupabasePlaygroundContent() {
                 <path d="M17.791,46.836C18.502,46.53,19,45.823,19,45v-5.4c0-0.197,0.016-0.402,0.041-0.61C19.027,38.994,19.014,38.997,19,39 c0,0-3,0-3.6,0c-1.5,0-2.8-0.6-3.4-1.8c-0.7-1.3-1-3.5-2.8-4.7C8.9,32.3,9.1,32,9.7,32c0.6,0.1,1.9,0.9,2.7,2c0.9,1.1,1.8,2,3.4,2 c2.487,0,3.82-0.125,4.622-0.555C21.356,34.056,22.649,33,24,33v-0.025c-5.668-0.182-9.289-2.066-10.975-4.975 c-3.665,0.042-6.856,0.405-8.677,0.707c-0.058-0.327-0.108-0.656-0.151-0.987c1.797-0.296,4.843-0.647,8.345-0.714 c-0.112-0.276-0.209-0.559-0.291-0.849c-3.511-0.178-6.541-0.039-8.187,0.097c-0.02-0.332-0.047-0.663-0.051-0.999 c1.649-0.135,4.597-0.27,8.018-0.111c-0.079-0.5-0.13-1.011-0.13-1.543c0-1.7,0.6-3.5,1.7-5c-0.5-1.7-1.2-5.3,0.2-6.6 c2.7,0,4.6,1.3,5.5,2.1C21,13.4,22.9,13,25,13s4,0.4,5.6,1.1c0.9-0.8,2.8-2.1,5.5-2.1c1.5,1.4,0.7,5,0.2,6.6c1.1,1.5,1.7,3.2,1.6,5 c0,0.484-0.045,0.951-0.11,1.409c3.499-0.172,6.527-0.034,8.204,0.102c-0.002,0.337-0.033,0.666-0.051,0.999 c-1.671-0.138-4.775-0.28-8.359-0.089c-0.089,0.336-0.197,0.663-0.325,0.98c3.546,0.046,6.665,0.389,8.548,0.689 c-0.043,0.332-0.093,0.661-0.151,0.987c-1.912-0.306-5.171-0.664-8.879-0.682C35.112,30.873,31.557,32.75,26,32.969V33 c2.6,0,5,3.9,5,6.6V45c0,0.823,0.498,1.53,1.209,1.836C41.37,43.804,48,35.164,48,25C48,12.318,37.683,2,25,2S2,12.318,2,25 C2,35.164,8.63,43.804,17.791,46.836z"></path>
               </svg>
             </a>
-            <button
-              onClick={openModal}
+            <a
+              href="https://github.com/hand-dot/supabase-client-playground/issues/"
+              target="_blank"
               className="rounded-lg bg-neutral-800 border-green-600 border-2 py-2 px-6 font-sans text-sm font-light text-white"
             >
               Give feedback
-            </button>
+            </a>
           </div>
         </div>
 
@@ -248,8 +159,14 @@ function SupabasePlaygroundContent() {
                 />
                 <button
                   type="submit"
-                  onClick={handleRunQuery}
-                  className="flex justify-center items-center gap-2 w-48 rounded-lg bg-green-600 border-green-500 border-2 py-3 px-6 font-sans text-xs font-bold text-white"
+                  onClick={(e: FormEvent) => {
+                    e.preventDefault();
+                    if (apiKey && apiUrl && query) {
+                      handleRunQuery({ key: apiKey, url: apiUrl, query });
+                    }
+                  }}
+                  disabled={!apiKey || !apiUrl || !query}
+                  className="flex justify-center items-center gap-2 w-48 rounded-lg bg-green-600 border-green-500 border-2 py-3 px-6 font-sans text-xs font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
